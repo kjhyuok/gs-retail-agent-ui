@@ -1,8 +1,0 @@
-[
-  {"store_id":"GS001","category":"도시락","waste_rate":3.2},
-  {"store_id":"GS001","category":"베이커리","waste_rate":8.2},
-  {"store_id":"GS001","category":"음료","waste_rate":1.1},
-  {"store_id":"GS001","category":"유제품","waste_rate":5.8},
-  {"store_id":"GS007","category":"도시락","waste_rate":12.5},
-  {"store_id":"GS008","category":"도시락","waste_rate":14.2}
-]
