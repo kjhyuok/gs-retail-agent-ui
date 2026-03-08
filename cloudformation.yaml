@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: GS Retail AI Agent Workshop - Streamlit UI + Sample Data on S3
+
+Parameters:
+  GitHubRepo:
+    Type: String
+    Default: https://github.com/kjhyuok/gs-retail-agent-ui.git
+    Description: GitHub repo URL for Streamlit UI
+  InstanceType:
+    Type: String
+    Default: t3.medium
+    AllowedValues: [t3.small, t3.medium, t3.large]
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+  # --- S3: Agent가 참조할 Sample Data 버킷 ---
+  SampleDataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub gs-retail-workshop-data-${AWS::AccountId}
+      Tags:
+        - Key: Workshop
+          Value: gs-retail-agent
+
+  # --- IAM: EC2 (Streamlit) + AgentCore 접근 ---
+  InstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonBedrockFullAccess
+      Policies:
+        - PolicyName: WorkshopAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: bedrock-agentcore:*
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt SampleDataBucket.Arn
+                  - !Sub ${SampleDataBucket.Arn}/*
+
+  InstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles: [!Ref InstanceRole]
+
+  # --- IAM: Agent Runtime이 S3 데이터를 읽을 수 있는 Role ---
+  AgentRuntimeRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: gs-retail-agent-runtime-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - bedrock.amazonaws.com
+                - bedrock-agentcore.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: AgentDataAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:ListBucket
+                Resource:
+                  - !GetAtt SampleDataBucket.Arn
+                  - !Sub ${SampleDataBucket.Arn}/*
+              - Effect: Allow
+                Action:
+                  - bedrock:InvokeModel
+                  - bedrock:InvokeModelWithResponseStream
+                Resource: '*'
+
+  # --- Security Group ---
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Streamlit UI + SSH
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8501
+          ToPort: 8501
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  # --- EC2: Streamlit UI + S3에 sample data 업로드 ---
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    DependsOn: SampleDataBucket
+    Properties:
+      InstanceType: !Ref InstanceType
+      ImageId: !Ref LatestAmiId
+      IamInstanceProfile: !Ref InstanceProfile
+      SecurityGroupIds: [!GetAtt SecurityGroup.GroupId]
+      Tags:
+        - Key: Name
+          Value: gs-retail-workshop-ui
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -ex
+
+          # 시스템 패키지
+          dnf install -y python3.11 python3.11-pip git
+
+          # 코드 클론
+          cd /home/ec2-user
+          git clone ${GitHubRepo} streamlit-ui
+          cd streamlit-ui
+
+          # Sample data를 S3에 업로드
+          for f in data/*.json; do
+            aws s3 cp "$f" s3://${SampleDataBucket}/sample-data/$(basename "$f")
+          done
+
+          # 의존성 설치
+          python3.11 -m pip install -r requirements.txt
+
+          # 소유권
+          chown -R ec2-user:ec2-user /home/ec2-user/streamlit-ui
+
+          # systemd 서비스 등록
+          cat > /etc/systemd/system/streamlit.service << 'EOF'
+          [Unit]
+          Description=GS Retail Streamlit UI
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=ec2-user
+          WorkingDirectory=/home/ec2-user/streamlit-ui
+          Environment=SAMPLE_DATA_DIR=/home/ec2-user/streamlit-ui/data
+          Environment=S3_DATA_BUCKET=${SampleDataBucket}
+          Environment=S3_DATA_PREFIX=sample-data
+          Environment=AWS_DEFAULT_REGION=us-east-1
+          ExecStart=/usr/bin/python3.11 -m streamlit run app.py --server.port 8501 --server.headless true --server.address 0.0.0.0
+          Restart=always
+          RestartSec=3
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+
+          systemctl daemon-reload
+          systemctl enable streamlit
+          systemctl start streamlit
+
+Outputs:
+  StreamlitURL:
+    Description: Streamlit UI URL
+    Value: !Sub http://${EC2Instance.PublicIp}:8501
+  EC2PublicIP:
+    Description: EC2 Public IP
+    Value: !GetAtt EC2Instance.PublicIp
+  SampleDataBucket:
+    Description: S3 bucket containing sample data for Agent tools
+    Value: !Ref SampleDataBucket
+  SampleDataPath:
+    Description: S3 path for Agent tool code to reference
+    Value: !Sub s3://${SampleDataBucket}/sample-data/
+  AgentRuntimeRoleArn:
+    Description: IAM Role ARN for Agent Runtime (use in AgentCore deployment)
+    Value: !GetAtt AgentRuntimeRole.Arn

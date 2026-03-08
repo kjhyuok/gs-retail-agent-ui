@@ -1,0 +1,8 @@
+[
+  {"store_id":"GS001","category":"도시락","current_stock":12,"min_stock":20},
+  {"store_id":"GS001","category":"음료","current_stock":45,"min_stock":50},
+  {"store_id":"GS001","category":"베이커리","current_stock":8,"min_stock":10},
+  {"store_id":"GS002","category":"도시락","current_stock":18,"min_stock":15},
+  {"store_id":"GS002","category":"음료","current_stock":30,"min_stock":40},
+  {"store_id":"GS009","category":"음료","current_stock":0,"min_stock":40}
+]
