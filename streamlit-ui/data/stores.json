@@ -1,0 +1,12 @@
+[
+  {"store_id": "GS001", "name": "역삼역점", "area": "강남", "type": "오피스"},
+  {"store_id": "GS002", "name": "잠실새내점", "area": "송파", "type": "주거"},
+  {"store_id": "GS003", "name": "테헤란로점", "area": "강남", "type": "오피스"},
+  {"store_id": "GS004", "name": "홍대입구점", "area": "마포", "type": "유흥"},
+  {"store_id": "GS005", "name": "신촌역점", "area": "서대문", "type": "학교"},
+  {"store_id": "GS006", "name": "강남역점", "area": "강남", "type": "오피스"},
+  {"store_id": "GS007", "name": "잠실1호점", "area": "송파", "type": "주거"},
+  {"store_id": "GS008", "name": "홍대2호점", "area": "마포", "type": "유흥"},
+  {"store_id": "GS009", "name": "신촌3호점", "area": "서대문", "type": "학교"},
+  {"store_id": "GS010", "name": "여의도2호점", "area": "영등포", "type": "오피스"}
+]
