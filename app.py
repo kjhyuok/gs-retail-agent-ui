@@ -231,7 +231,7 @@ with st.sidebar:
         arn_input = st.text_input(
             "Runtime ARN",
             value=st.session_state.agent_arn,
-            placeholder="arn:aws:bedrock-agentcore:us-east-1:...",
+            placeholder="arn:aws:bedrock-agentcore:<region>:...",
             label_visibility="collapsed",
         )
         if arn_input != st.session_state.agent_arn:

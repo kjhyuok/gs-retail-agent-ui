@@ -1,12 +1,16 @@
 """AgentCore 클라이언트 — Runtime 조회 및 Agent 호출"""
 import json
+import os
 import time
 import boto3
 from botocore.exceptions import ClientError
 
+DEFAULT_REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 
-def validate_runtime(runtime_arn, region="us-east-1"):
+
+def validate_runtime(runtime_arn, region=None):
     """Runtime ARN이 유효하고 READY 상태인지 검증"""
+    region = region or DEFAULT_REGION
     try:
         client = boto3.client(
             "bedrock-agentcore", region_name=region,
@@ -24,8 +28,9 @@ def validate_runtime(runtime_arn, region="us-east-1"):
         return {"valid": False, "error": str(e)}
 
 
-def list_agent_runtimes(region="us-east-1"):
+def list_agent_runtimes(region=None):
     """배포된 AgentCore Runtime 목록 조회"""
+    region = region or DEFAULT_REGION
     try:
         client = boto3.client(
             "bedrock-agentcore", region_name=region,
@@ -44,8 +49,9 @@ def list_agent_runtimes(region="us-east-1"):
         return [{"error": str(e)}]
 
 
-def invoke_agent(runtime_arn, message, session_id, region="us-east-1"):
+def invoke_agent(runtime_arn, message, session_id, region=None):
     """AgentCore Runtime에 메시지 전송 및 응답 수신"""
+    region = region or DEFAULT_REGION
     try:
         client = boto3.client(
             "bedrock-agentcore", region_name=region,

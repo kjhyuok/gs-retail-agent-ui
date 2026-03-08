@@ -21,7 +21,7 @@ aws cloudformation create-stack \
   --stack-name gs-retail-workshop \
   --template-body file://cloudformation.yaml \
   --capabilities CAPABILITY_NAMED_IAM \
-  --region us-east-1
+  --region us-east-1 (또는 us-west-2)
 ```
 
 배포 후 `http://<EC2_Public_IP>:8501`로 접속하세요.

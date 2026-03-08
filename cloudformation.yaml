@@ -155,7 +155,7 @@ Resources:
           Environment=SAMPLE_DATA_DIR=/home/ec2-user/streamlit-ui/data
           Environment=S3_DATA_BUCKET=${SampleDataBucket}
           Environment=S3_DATA_PREFIX=sample-data
-          Environment=AWS_DEFAULT_REGION=us-east-1
+          Environment=AWS_DEFAULT_REGION=${AWS::Region}
           ExecStart=/usr/bin/python3.11 -m streamlit run app.py --server.port 8501 --server.headless true --server.address 0.0.0.0
           Restart=always
           RestartSec=3
